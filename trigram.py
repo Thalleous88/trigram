@@ -3,6 +3,8 @@ words = open('names.txt', 'r').read().splitlines()
 import torch
 t = {}
 
+# REGULAR TRIGRAM ALGORITHM
+
 for w in words:
     chs = ['<S>'] + list(w) + ['<E>']
     for ch1, ch2, ch3 in zip(chs, chs[1:], chs[2:]):
@@ -25,11 +27,10 @@ for w in words:
         ix3 = stoi[ch3]
         N[ix1, ix2, ix3] += 1
         
-N[0:1:]
+
 itos = {i:s for s,i in stoi.items()}
 itos
-N[2, 0, :]
-# Assume N is your trigram count tensor
+
 P = N.float()
 
 row_sums = P.sum(2, keepdim=True)
@@ -41,7 +42,7 @@ g = torch.Generator().manual_seed(2147483647)
 
 for i in range(15):
     out = []
-    ix1, ix2 = 0, 0  # Start with (0, 0) bigram
+    ix1, ix2 = 0, 0  
     while True:
         p = P[ix1][ix2]  # Get probability distribution over next char
 
@@ -54,21 +55,22 @@ for i in range(15):
         if ix3 == 0:
             break
 
-        # Move forward: (ix1, ix2) -> (ix2, ix3)
         ix1, ix2 = ix2, ix3
 
     print(''.join(out))
 
+# USING NEURONS WITH WEIGHT & BIASES
+
 P = N.float()
 row_sums = P.sum(1, keepdim=True)
+
 # Avoid division by zero
 row_sums[row_sums == 0] = 1
 P = P / row_sums
-P[0][2].sum()
 N = torch.zeros((27, 27, 27), dtype=torch.int32)
-N.shape
-# create the training set of trigram
 
+
+# create the training set of trigram
 xs, ys = [], []
 
 for w in words:
@@ -89,27 +91,26 @@ import torch.nn.functional as F
 x1 = F.one_hot(xs[:, 0], num_classes=27).float()  # shape: [N, vocab_size]
 x2 = F.one_hot(xs[:, 1], num_classes=27).float()  # shape: [N, vocab_size]
 
-# Concatenate the one-hot vectors for each pair
-xenc = torch.cat([x1, x2], dim=1).float()  # shape: [N, vocab_size * 2]
+# Concatenate the one-hot vectors for each pair to match the weights
+xenc = torch.cat([x1, x2], dim=1).float() 
 xenc.shape
 g = torch.Generator().manual_seed(2147483647+3)
 W = torch.randn((54, 27), generator=g, requires_grad = True)
 W
+
 logits = (xenc @ W) #log-counts
 counts = logits.exp()
 probs = counts/counts.sum(1, keepdims=True)
-probs
-probs[0]
+
 probs.shape
 for k in range(100):
-    # Split xs into two parts: first and second characters
-    x1 = F.one_hot(xs[:, 0], num_classes=27).float()  # shape: [N, vocab_size]
-    x2 = F.one_hot(xs[:, 1], num_classes=27).float()  # shape: [N, vocab_size]
+    x1 = F.one_hot(xs[:, 0], num_classes=27).float()  
+    x2 = F.one_hot(xs[:, 1], num_classes=27).float()  
 
     # Concatenate the one-hot vectors for each pair
-    xenc = torch.cat([x1, x2], dim=1).float()  # shape: [N, vocab_size * 2]
-    logits = xenc @ W # log-counts, W here is 54 x 27 because it predicts 27 set of characters
-    counts = logits.exp() # counts, equivalent to N (softmax function)
+    xenc = torch.cat([x1, x2], dim=1).float()  
+    logits = xenc @ W # log-counts
+    counts = logits.exp() # counts (softmax function)
     probs = counts/counts.sum(1, keepdims=True) # probabilities for the next character
     loss = -probs[torch.arange(xs.shape[0]), ys].log().mean() + 0.01*(W**2).mean()
     print(loss.item())
@@ -126,11 +127,11 @@ for i in range(15):
     ix1, ix2 = 0, 0
 
     while True:
-        xenc = F.one_hot(torch.tensor([ix1, ix2]), num_classes=27).view(-1)  # Flatten the one-hot vector
-        xenc = xenc.float()  # Convert to float tensor
-        logits = xenc @ W # log-counts
-        counts = logits.exp() # counts, equivalent to N (softmax function)
-        p = counts/counts.sum(0, keepdims=True) # probabilities for the next 
+        xenc = F.one_hot(torch.tensor([ix1, ix2]), num_classes=27).view(-1)
+        xenc = xenc.float()  
+        logits = xenc @ W 
+        counts = logits.exp() 
+        p = counts/counts.sum(0, keepdims=True) 
        
         ix3 = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
         out.append(itos[ix3])
@@ -140,7 +141,7 @@ for i in range(15):
 
     print(''.join(out))
     
-# Assume N is your trigram count tensor
+
 P = N.float()
 
 row_sums = P.sum(2, keepdim=True)
@@ -152,11 +153,9 @@ g = torch.Generator().manual_seed(2147483647)
 
 for i in range(15):
     out = []
-    ix1, ix2 = 0, 0  # Start with (0, 0) bigram
+    ix1, ix2 = 0, 0  
     while True:
-        p = P[ix1][ix2]  # Get probability distribution over next char
-
-        # Handle the case where p.sum() == 0
+        p = P[ix1][ix2]  
         if p.sum() == 0:
             p = torch.ones_like(p) / len(p)
 
@@ -165,7 +164,6 @@ for i in range(15):
         if ix3 == 0:
             break
 
-        # Move forward: (ix1, ix2) -> (ix2, ix3)
         ix1, ix2 = ix2, ix3
 
     print(''.join(out))
