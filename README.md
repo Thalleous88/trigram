@@ -1,3 +1,4 @@
 # Trigram
 
-trigram model using one layer of neurons to generate names
+Trigram model using one layer of neurons to generate names
+built using pytorch
